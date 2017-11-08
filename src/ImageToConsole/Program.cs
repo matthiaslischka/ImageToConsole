@@ -8,35 +8,72 @@ namespace ImageToConsole
 {
     internal class Program
     {
-        private static readonly string[] Characters = {" ", ".", "-", ":", "*", "+", "=", "%", "@", "#", "#"};
+        private static readonly string[] Characters = {" ", ".", "-", ":", "*", "+", "=", "%", "@", "#"};
 
         private static void Main(string[] args)
         {
-            var width = Math.Min(Console.BufferWidth, Console.WindowWidth);
-            var height = Math.Min(Console.BufferHeight, Console.WindowHeight) - 1;
-            var useColors = args.Any(a => a.ToLower() == "-c");
-            var filename = args.SingleOrDefault(a => a.ToLower() != "-c") ?? "default.png";
+            var parameters = ParseParameters(args);
 
-            using (var inputStream = File.OpenRead(filename))
+            var consolewidth = Math.Min(Console.BufferWidth, Console.WindowWidth);
+            var consoleHeight = Math.Min(Console.BufferHeight, Console.WindowHeight) - 1;
+
+            using (var inputStream = File.OpenRead(parameters.FileName))
             using (var image = Image.Load<Rgba32>(inputStream))
             {
-                image.Mutate(x => x.Resize(Math.Min(width, image.Width), Math.Min(height, image.Height)));
+                if (parameters.ScaleImage)
+                    ScaleImage(image, consolewidth, consoleHeight);
+                else
+                    image.Mutate(x =>
+                        x.Resize(Math.Min(consolewidth, image.Width), Math.Min(consoleHeight, image.Height)));
 
                 Console.BackgroundColor = ConsoleColor.Black;
+                Console.Clear();
                 for (var x = 0; x < image.Width; x++)
                 for (var y = 0; y < image.Height; y++)
                 {
                     Console.SetCursorPosition(x, y);
+                    var pixel = image[x, y];
 
-                    if (useColors)
-                        Console.ForegroundColor = GetColor(image[x, y].Rgb);
+                    if (parameters.UseColors)
+                        Console.ForegroundColor = GetColor(pixel.Rgb);
 
-                    Console.Write(Characters[(image[x, y].B * Characters.Length - 1) / 255]);
+                    var pixelBrightness = ((pixel.R + pixel.G + pixel.B) / 3 + pixel.A) / 2;
+                    var characterForPixel = Characters[(pixelBrightness * Characters.Length - 1) / 255];
+                    Console.Write(characterForPixel);
                 }
             }
 
             Console.ReadKey();
             Console.Clear();
+        }
+
+        private static Parameters ParseParameters(string[] args)
+        {
+            var parameters = new Parameters();
+
+            var commands = args.ToList();
+
+            parameters.UseColors = commands.Any(a => a.ToLower() == "-c");
+            commands.Remove("-c");
+
+            parameters.ScaleImage = commands.Any(a => a.ToLower() == "-s");
+            commands.Remove("-s");
+
+            parameters.FileName = commands.SingleOrDefault() ?? "default.png";
+
+            return parameters;
+        }
+
+        public static void ScaleImage(Image<Rgba32> image, int maxWidth, int maxHeight)
+        {
+            var ratioX = (double) maxWidth / image.Width;
+            var ratioY = (double) maxHeight / image.Height;
+            var ratio = Math.Min(ratioX, ratioY);
+
+            var targetWidth = (int) (image.Width * ratio);
+            var targetHeight = (int) (image.Height * ratio);
+
+            image.Mutate(x => x.Resize(targetWidth, targetHeight));
         }
 
         private static ConsoleColor GetColor(Rgb24 rgb)
@@ -57,6 +94,13 @@ namespace ImageToConsole
                 return ConsoleColor.Blue;
 
             return ConsoleColor.Gray;
+        }
+
+        private struct Parameters
+        {
+            public bool UseColors { get; set; }
+            public bool ScaleImage { get; set; }
+            public string FileName { get; set; }
         }
     }
 }
