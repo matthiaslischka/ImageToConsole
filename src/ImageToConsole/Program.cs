@@ -8,7 +8,7 @@ namespace ImageToConsole
 {
     internal class Program
     {
-        private static readonly string[] Characters = {" ", ".", "-", ":", "*", "+", "=", "%", "@", "#"};
+        private static readonly string[] Characters = { "#", "@", "%", "=", "+", "*", ":", "-", ".", " " };
 
         private static void Main(string[] args)
         {
@@ -38,6 +38,10 @@ namespace ImageToConsole
                         Console.ForegroundColor = GetColor(pixel.Rgb);
 
                     var pixelBrightness = ((pixel.R + pixel.G + pixel.B) / 3 + pixel.A) / 2;
+
+                    if (pixel.A < 50)
+                        pixelBrightness = 255;
+
                     var characterForPixel = Characters[(pixelBrightness * Characters.Length - 1) / 255];
                     Console.Write(characterForPixel);
                 }
