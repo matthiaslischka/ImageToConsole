@@ -14,6 +14,9 @@ namespace ImageToConsole
         {
             var parameters = ParseParameters(args);
 
+            var initialBackgroundColor = Console.BackgroundColor;
+            var initialForegroundColor = Console.ForegroundColor;
+
             var consolewidth = Math.Min(Console.BufferWidth, Console.WindowWidth);
             var consoleHeight = Math.Min(Console.BufferHeight, Console.WindowHeight) - 1;
 
@@ -48,6 +51,8 @@ namespace ImageToConsole
             }
 
             Console.ReadKey();
+            Console.BackgroundColor = initialBackgroundColor;
+            Console.ForegroundColor = initialForegroundColor;
             Console.Clear();
         }
 
